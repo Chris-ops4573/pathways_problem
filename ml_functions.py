@@ -20,9 +20,8 @@ def extract_hdbscan_features(embeddings: list[list[float]]) -> dict:
     largest_cluster_ratio = largest_cluster_size / total_points
     avg_outlier_score = outlier_scores[labels == -1].mean() if n_outliers > 0 else 0.0
 
-    return {
-        "n_clusters": n_clusters,
-        "outlier-ratio": float(n_outliers/total_points),
-        "largest_cluster_ratio": float(largest_cluster_ratio),
-        "avg_outlier_score": float(avg_outlier_score)
-    }
+    return [
+        n_clusters,
+        float(largest_cluster_ratio),
+        float(avg_outlier_score)
+    ]
