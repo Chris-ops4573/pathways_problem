@@ -1,13 +1,15 @@
 import pathway as pw
 import re
 import numpy as np
+import hdbscan
 from pathway_tools import extract_pdf_text, clean_and_split, embed_sentences
+from ml_functions import extract_hdbscan_features
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # View file content
 table = pw.io.gdrive.read(
-    object_id="1dlzAYEqKrlJqYkuVRkandoyYfPA7bE1V",
+    object_id="1H0HRA1VXVIJshvr64bXObuRitD2HpBsi",
     service_user_credentials_file="credentials.json",
     mode="static"
 )
@@ -25,9 +27,5 @@ vector_table = sentence_table.select(
 df = pw.debug.table_to_pandas(vector_table)
 embeddings = np.vstack([np.array(e).squeeze() for e in df["embeddings"]])
 
-cosine_matrix = cosine_similarity(embeddings)
-n = len(embeddings)
-upper_tri_indices = np.triu_indices(n, k=1)
-avg_score = cosine_matrix[upper_tri_indices].mean()
-std_score = cosine_matrix[upper_tri_indices].std()
-print(f"Average cosine similarity: {avg_score}, Std Dev: {std_score}")
+print(extract_hdbscan_features(embeddings))
+pw.run()

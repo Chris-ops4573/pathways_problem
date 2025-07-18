@@ -1,0 +1,28 @@
+import hdbscan
+import numpy as np
+
+def extract_hdbscan_features(embeddings: list[list[float]]) -> dict:
+    # Fit HDBSCAN
+    clusterer = hdbscan.HDBSCAN(min_cluster_size=5, prediction_data=True)
+    clusterer.fit(embeddings)
+
+    labels = clusterer.labels_  # Cluster labels: -1 means outlier
+    outlier_scores = clusterer.outlier_scores_
+
+    total_points = len(labels)
+    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+    n_outliers = np.sum(labels == -1)
+
+    largest_cluster_size = 0
+    if n_clusters > 0:
+        largest_cluster_size = np.max(np.bincount(labels[labels != -1]))
+
+    largest_cluster_ratio = largest_cluster_size / total_points
+    avg_outlier_score = outlier_scores[labels == -1].mean() if n_outliers > 0 else 0.0
+
+    return {
+        "n_clusters": n_clusters,
+        "outlier-ratio": float(n_outliers/total_points),
+        "largest_cluster_ratio": float(largest_cluster_ratio),
+        "avg_outlier_score": float(avg_outlier_score)
+    }
