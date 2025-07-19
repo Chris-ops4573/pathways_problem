@@ -1,5 +1,6 @@
 import hdbscan
 import numpy as np
+import textstat
 
 def extract_hdbscan_features(embeddings: list[list[float]]) -> dict:
     # Fit HDBSCAN
@@ -25,3 +26,10 @@ def extract_hdbscan_features(embeddings: list[list[float]]) -> dict:
         float(largest_cluster_ratio),
         float(avg_outlier_score)
     ]
+
+def compute_readability_score(text: str) -> float:
+    try:
+        return textstat.flesch_reading_ease(text)
+    except Exception as e:
+        print(f"Error computing readability: {str(e)}")
+        return 0.0  # fallback value if something goes wrong
