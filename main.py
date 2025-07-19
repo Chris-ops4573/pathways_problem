@@ -10,6 +10,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials
+from sentence_transformers import SentenceTransformer, util
+
+transformer = SentenceTransformer("all-MiniLM-L6-v2")  # or whatever you used inside embed_sentences
 
 def get_folder_files(folder_id="1t3bRu8MyW3GC-DvMYvZ5ckDG60_cMHzc"):
     """Fetch all PDF file IDs from a given Google Drive folder, even if more than 100."""
@@ -44,7 +47,7 @@ def get_folder_files(folder_id="1t3bRu8MyW3GC-DvMYvZ5ckDG60_cMHzc"):
     return [{"fileId": file['id'], "name": file['name']} for file in all_files]
 
 # Run it
-training_files = get_folder_files()
+training_files = get_folder_files() 
 
 files = [
     {"fileId": "1BwVMU26RRu6a8fZ0qmS8leUeXQHjIshD", "label": 0},
@@ -105,8 +108,6 @@ for file in files:
         print(f"Error processing {file_id}: {str(e)}")
         features.append([0.0, 0.0, 0.0, 0.0])  # fallback in case of error
 
-
-
 testing_features = []
 
 for file in training_files:
@@ -147,8 +148,6 @@ for file in training_files:
 
 pw.run()
 
-print("Extracted features:", features)
-
 X = np.array(features)
 Y = np.array(labels)
 
@@ -158,6 +157,62 @@ model.fit(X, Y)
 test = np.array(testing_features)
 prediction = model.predict(test)
 print(f"Prediction for test input {test}: {prediction}")
+
+conference_scopes = {
+    "CVPR": "computer vision, image processing, object detection, image segmentation, 3D reconstruction",
+    "NeurIPS": "machine learning, neural networks, optimization, probabilistic models, reinforcement learning",
+    "EMNLP": "natural language processing, language models, sentiment analysis, question answering",
+    "KDD": "data mining, large-scale data analytics, business intelligence, anomaly detection",
+    "TMLR": "trustworthy machine learning, reproducibility, fairness, explainability, robustness",
+    "DAA": "data analysis, applied statistics, anomaly detection, signal processing"
+}
+
+scope_sentences = list(conference_scopes.values())
+scope_embeddings = transformer.encode(scope_sentences, normalize_embeddings=True)
+conference_embeddings = dict(zip(conference_scopes.keys(), scope_embeddings))
+
+print("\n Starting classification of publishable papers...\n")
+
+conference = []
+for i, pred in enumerate(prediction):
+    if pred == 1:
+        file = training_files[i]
+        file_id = file["fileId"]
+        file_name = file["name"]
+
+        try:
+            table = pw.io.gdrive.read(
+                object_id=file_id,
+                service_user_credentials_file="credentials.json",
+                mode="static"
+            )
+
+            class MySchema(pw.Schema):
+                data: bytes
+            table = table._with_schema(MySchema)
+
+            text_table = table.select(text=extract_pdf_text(table.data))
+            full_text = pw.debug.table_to_pandas(text_table)["text"][0]
+            abstract = full_text[:1000]
+
+            abstract_embedding = transformer.encode(abstract, normalize_embeddings=True)
+
+            # Compute cosine similarity with each conference
+            conf_scores = {
+                conf: float(util.cos_sim(abstract_embedding, conf_emb))
+                for conf, conf_emb in conference_embeddings.items()
+            }
+
+            predicted_conf = max(conf_scores, key=conf_scores.get)
+            conference.append({
+                "name": file_name,
+                "predicted_conference": predicted_conf,
+                "scores": conf_scores
+            })
+
+        except Exception as e:
+            print(f" Error processing {file_name}: {str(e)}")
+print(conference)
 
 feature_names = ["n_clusters", "largest_cluster_ratio", "avg_outlier_score", "readability_score"]
 
