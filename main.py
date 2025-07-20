@@ -148,6 +148,8 @@ for file in training_files:
 
 pw.run()
 
+print("Extracted features:", features)
+
 X = np.array(features)
 Y = np.array(labels)
 
@@ -206,13 +208,14 @@ for i, pred in enumerate(prediction):
             predicted_conf = max(conf_scores, key=conf_scores.get)
             conference.append({
                 "name": file_name,
-                "predicted_conference": predicted_conf,
-                "scores": conf_scores
+                "predicted_conference": predicted_conf
             })
 
         except Exception as e:
             print(f" Error processing {file_name}: {str(e)}")
-print(conference)
+
+for paper in conference:
+    print(f"paper {paper['name']} goes to conference {paper['predicted_conference']}")
 
 feature_names = ["n_clusters", "largest_cluster_ratio", "avg_outlier_score", "readability_score"]
 
