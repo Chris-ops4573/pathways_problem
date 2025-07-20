@@ -148,8 +148,6 @@ for file in training_files:
 
 pw.run()
 
-print("Extracted features:", features)
-
 X = np.array(features)
 Y = np.array(labels)
 
@@ -158,7 +156,6 @@ model.fit(X, Y)
 
 test = np.array(testing_features)
 prediction = model.predict(test)
-print(f"Prediction for test input {test}: {prediction}")
 
 conference_scopes = {
     "CVPR": "computer vision, image processing, object detection, image segmentation, 3D reconstruction",
@@ -213,6 +210,8 @@ for i, pred in enumerate(prediction):
 
         except Exception as e:
             print(f" Error processing {file_name}: {str(e)}")
+
+print(f"Prediction for test input {test}: {prediction}")
 
 for paper in conference:
     print(f"paper {paper['name']} goes to conference {paper['predicted_conference']}")
